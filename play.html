@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VEIL — Escape from Kurogane</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+</script>
+<style>
+  :root { --bg:#05070c; --panel:rgba(10,14,22,.86); --line:rgba(255,255,255,.12); --fg:#e6e9ef; --muted:#8b93a3; --accent:#80d8ff; --warn:#ffb74d; --bad:#ff5252; --good:#9ccc65; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:14px/1.4 "Segoe UI", system-ui, sans-serif; overflow:hidden; }
+  #view { position:fixed; inset:0; display:block; outline:none; cursor:crosshair; }
+  .hidden { display:none !important; }
+  .muted { color:var(--muted); }
+  button { background:#1b2230; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:6px 10px; cursor:pointer; font:inherit; }
+  button:hover { background:#273142; } button:disabled { opacity:.4; cursor:default; } button.on { background:#2a4b60; border-color:var(--accent); }
+  button.secondary { background:transparent; }
+  kbd { margin-left:6px; font:11px monospace; color:var(--muted); border:1px solid var(--line); border-radius:3px; padding:0 4px; }
+
+  /* HUD */
+  #hud { position:fixed; inset:0; pointer-events:none; }
+  #hud > * { pointer-events:auto; }
+  #labels { position:fixed; inset:0; pointer-events:none; overflow:hidden; }
+  .lbl { position:absolute; left:0; top:0; white-space:nowrap; font-size:11px; text-shadow:0 1px 2px #000, 0 0 4px #000; pointer-events:none; }
+  .lbl-loc { font-size:13px; letter-spacing:.2em; color:rgba(255,255,255,.35); font-weight:600; }
+  .lbl-char { color:#fff; font-weight:600; }
+  .lbl-enemy { color:#ff8a80; } .lbl-elite { color:#e1bee7; font-weight:600; }
+  .lbl-item { color:#ffe082; } .lbl-door { color:#ffab91; } .lbl-small { color:#b0bec5; font-size:10px; }
+  .lbl-wp { color:#fff; font-size:10px; background:rgba(0,0,0,.5); padding:1px 4px; border-radius:3px; }
+  #topbar { position:fixed; top:0; left:0; right:0; display:flex; gap:16px; align-items:center; padding:8px 12px; background:linear-gradient(rgba(5,7,12,.9), rgba(5,7,12,0)); pointer-events:none; }
+  #topbar > * { pointer-events:auto; }
+  #topbar .spacer { flex:1; }
+  #topbar a { color:var(--muted); text-decoration:none; font-size:12px; } #topbar a:hover { color:var(--fg); }
+  #paused-banner { position:fixed; top:48px; left:50%; transform:translateX(-50%); padding:4px 14px; border:1px solid var(--accent); color:var(--accent); border-radius:20px; background:var(--panel); letter-spacing:.2em; font-size:12px; }
+  #cursor-hint { position:fixed; left:0; top:0; padding:3px 8px; background:rgba(0,0,0,.75); border:1px solid var(--line); border-radius:4px; font-size:12px; pointer-events:none; max-width:320px; }
+  #cursor-hint:empty { display:none; }
+  #portraits { position:fixed; left:12px; bottom:12px; display:flex; gap:8px; }
+  .portrait { width:170px; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:8px 10px; cursor:pointer; position:relative; }
+  .portrait.sel { border-color:var(--c); box-shadow:0 0 0 1px var(--c), 0 0 18px rgba(255,255,255,.08); }
+  .portrait .pkey { position:absolute; right:8px; top:6px; font:11px monospace; color:var(--muted); }
+  .portrait .pdot { width:14px; height:14px; border-radius:50%; background:var(--c); display:inline-block; vertical-align:middle; margin-right:6px; }
+  .portrait .pname { display:inline-block; font-weight:600; }
+  .portrait .pinfo { font-size:11px; color:var(--muted); min-height:14px; }
+  .portrait .pattrs { display:flex; flex-wrap:wrap; gap:2px 8px; font:10px monospace; color:#b0bec5; margin-top:4px; }
+  .portrait .pabil { font-size:11px; color:#ffe082; margin-top:3px; }
+  #actions { position:fixed; left:50%; transform:translateX(-50%); bottom:12px; display:flex; gap:6px; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:6px; }
+  #orders { position:fixed; right:12px; bottom:12px; width:360px; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:12px; }
+  #orders .ohead { display:flex; gap:8px; align-items:center; margin-bottom:6px; }
+  #orders .ohead .delay { flex:1; color:var(--accent); }
+  #orders button { padding:0 6px; font-size:12px; margin-left:3px; }
+  #orders .orow { display:flex; gap:8px; align-items:center; padding:2px 0; border-top:1px solid var(--line); }
+  #orders .n { width:16px; color:var(--muted); font-family:monospace; } #orders .what { flex:1; } #orders .wait { color:var(--accent); }
+  #orders .x { background:transparent; border:none; color:var(--muted); }
+  #toasts { position:fixed; top:80px; right:12px; width:360px; display:flex; flex-direction:column; gap:6px; pointer-events:none; }
+  .toast { background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:6px; padding:8px 10px; font-size:13px; transition:opacity .8s; }
+  .toast.warn { border-left-color:var(--warn); } .toast.good { border-left-color:var(--good); } .toast.fail { border-left-color:var(--bad); } .toast.win { border-left-color:var(--good); }
+  .toast.out { opacity:0; }
+  .toast.event { border-left-color:#ce93d8; }
+  .bell { color:var(--warn); animation:pulse 1.2s infinite; } @keyframes pulse { 50% { opacity:.3; } }
+  .presets { display:flex; gap:8px; margin:12px 0; flex-wrap:wrap; }
+  .presets label { flex:1; min-width:220px; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:8px 10px; cursor:pointer; font-size:12px; }
+  .presets label.on { border-color:var(--accent); } .presets label span { color:var(--muted); display:block; }
+  .badges { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; justify-content:center; }
+  .badge { font-size:12px; padding:3px 8px; border:1px solid var(--line); border-radius:12px; color:var(--muted); }
+  .badge.on { color:#ffd54f; border-color:#ffd54f; }
+  #overlay { position:fixed; inset:0; background:rgba(5,7,12,.7); display:flex; align-items:center; justify-content:center; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:24px 32px; max-width:560px; text-align:center; }
+  .panel h1 { margin:0 0 8px; letter-spacing:.3em; } .panel.fail h1 { color:var(--bad); } .panel.win h1 { color:var(--good); }
+  .row { display:flex; gap:10px; justify-content:center; margin-top:14px; flex-wrap:wrap; }
+  #help { position:fixed; inset:0; background:rgba(5,7,12,.85); display:flex; align-items:center; justify-content:center; }
+  #help .panel { text-align:left; max-width:760px; max-height:90vh; overflow:auto; }
+  #help table { border-collapse:collapse; width:100%; font-size:13px; } #help td { padding:3px 8px; border-top:1px solid var(--line); vertical-align:top; } #help td:first-child { white-space:nowrap; color:var(--accent); font-family:monospace; }
+
+  /* Squad select */
+  #squad { position:fixed; inset:0; overflow:auto; background:radial-gradient(1200px 600px at 50% -10%, #182033, var(--bg)); }
+  .squad-panel { max-width:1100px; margin:30px auto; padding:0 20px; }
+  .squad-panel h1 { letter-spacing:.35em; margin-bottom:4px; } .squad-panel h1 span { letter-spacing:.05em; color:var(--muted); font-weight:400; font-size:16px; }
+  .squad-panel .back { float:right; color:var(--muted); font-size:12px; text-decoration:none; margin-top:14px; } .squad-panel .back:hover { color:var(--fg); }
+  .roster { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:12px; margin:16px 0; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 14px; cursor:pointer; position:relative; }
+  .card:hover { border-color:rgba(255,255,255,.3); } .card.on { border-color:var(--c); box-shadow:0 0 0 1px var(--c); }
+  .card .cdot { width:12px; height:12px; border-radius:50%; background:var(--c); position:absolute; right:12px; top:14px; }
+  .card .cname { font-weight:600; font-size:15px; } .card .cname small { color:var(--muted); font-weight:400; margin-left:4px; }
+  .card .cattrs { margin:8px 0; } .card .cattrs div { display:flex; align-items:center; gap:6px; font:11px monospace; margin:2px 0; }
+  .card .cattrs span { width:28px; color:var(--muted); } .card .cattrs i { height:5px; background:var(--c); border-radius:3px; display:block; opacity:.8; } .card .cattrs b { width:14px; text-align:right; }
+  .card .cabil span { display:inline-block; background:#2a2f3a; border-radius:4px; padding:2px 6px; margin:2px 4px 2px 0; font-size:12px; color:#ffe082; }
+  .card .ctags em { font-style:normal; color:var(--good); font-size:11px; margin-right:8px; }
+  .warns { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:8px 12px; font-size:13px; color:var(--warn); } .warns .ok { color:var(--good); }
+</style>
+</head>
+<body>
+<canvas id="view" tabindex="0"></canvas>
+<div id="labels"></div>
+<div id="squad" class="hidden"></div>
+<div id="hud" class="hidden">
+  <div id="topbar">
+    <b>VEIL</b><span id="top-loc"></span><span id="top-layer" class="muted"></span><span id="top-time" class="muted"></span><span id="top-bell" class="bell hidden" title="No quicksave for 90 s — press F5">🔔 F5</span>
+    <span class="spacer"></span>
+    <a href="./">← About</a>
+    <button id="btn-pause">Pause</button><button id="btn-help">Help (F1)</button>
+  </div>
+  <div id="paused-banner">PAUSED — orders are queued</div>
+  <div id="cursor-hint"></div>
+  <div id="portraits"></div>
+  <div id="actions"></div>
+  <div id="orders" class="hidden"></div>
+  <div id="toasts"></div>
+  <div id="overlay" class="hidden"></div>
+  <div id="help" class="hidden">
+    <div class="panel">
+      <h2>How to play</h2>
+      <p>Get everyone to the <b>Main Gate</b> (north-east). Enemies have vision cones; the near (bright) zone spots you instantly, the far (striped) zone only notices movement and fills their meter over a few seconds. Bushes hide you unless they are right next to you. If any enemy's meter fills, or an enemy finds a body, you lose the map. Explore, find what blocks you, solve it, and new routes open — expect to go back and forth.</p>
+      <table>
+        <tr><td>Left click / 1–4</td><td>Select a character. Left click an enemy = takedown, a door = unlock/lockpick, an item = take, a ladder/vine/grate/hatch = use, a lever = use, a body = carry.</td></tr>
+        <tr><td>Right click</td><td>Move (replaces orders). <b>Shift</b> + right click appends a waypoint.</td></tr>
+        <tr><td>Wheel over waypoint</td><td>Set the wait time at that waypoint. <b>Ctrl</b> + wheel sets the start delay of the whole order queue (countdown ring).</td></tr>
+        <tr><td>Space</td><td>Pause / resume. Orders can be given while paused — synchronise your squad.</td></tr>
+        <tr><td>T S B W L</td><td>Takedown / Throw Stone / Smoke Bomb / Whistle / Lockpick (then click a target). Only if the character has the ability.</td></tr>
+        <tr><td>R</td><td>Toggle sneak / run. Running is fast but loud (7 m) and easier to spot.</td></tr>
+        <tr><td>C</td><td>Drop a carried body here (drop it in a bush to hide it, or next to water to sink it). Click a bush while carrying to walk there and hide it.</td></tr>
+        <tr><td>H / X</td><td>Hold: clear all orders.</td></tr>
+        <tr><td>F</td><td>Centre the camera on the selected character.</td></tr>
+        <tr><td>Tab</td><td>Cycle the viewed layer (Sewers / Ground / Rooftops). Selecting a character snaps back to their layer.</td></tr>
+        <tr><td>Wheel / middle drag / arrows</td><td>Zoom / pan.</td></tr>
+        <tr><td>F5 / F9</td><td>Quicksave / quickload. Use them liberally.</td></tr>
+        <tr><td>F2</td><td>Reveal mode (design view): no fog, every enemy and cone shown. For studying the map, not for playing.</td></tr>
+        <tr><td>Esc</td><td>Cancel an armed ability, close this, or deselect.</td></tr>
+      </table>
+      <p><label><input type="checkbox" id="opt-reminder" checked onchange="window.game.reminderOn = this.checked"> Save reminder bell after 90 s without a quicksave</label></p>
+      <div class="row"><button id="help-close">Close</button></div>
+    </div>
+  </div>
+</div>
+<script>window.addEventListener("error", (e) => console.log("JSERROR " + e.message + " @ " + e.filename + ":" + e.lineno)); window.addEventListener("unhandledrejection", (e) => console.log("JSREJECT " + (e.reason && e.reason.stack || e.reason)));</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
