@@ -7,7 +7,7 @@ export class Input {
   constructor(canvas, sim, renderer, hud, game) {
     this.canvas = canvas; this.sim = sim; this.renderer = renderer; this.hud = hud; this.game = game;
     this.vp = renderer.viewport;
-    this.ui = { selectedId: sim.state.chars[0].id, viewLayer: sim.state.chars[0].layer, armed: null, hover: null, cursorWorld: null, followLayer: true, paused: true, reveal: false };
+    this.ui = { selectedId: sim.state.chars[0].id, viewLayer: sim.state.chars[0].layer, armed: null, hover: null, cursorWorld: null, followLayer: true, paused: true, reveal: false, drag: null };
     this.keys = new Set();
     this.mouse = { x: 0, y: 0, down: {}, dragStart: null, panning: false };
     this.bind();
@@ -42,6 +42,7 @@ export class Input {
     this.mouse.x = e.clientX - r.left; this.mouse.y = e.clientY - r.top;
     if (this.mouse.panning) { this.vp.panPixels(e.movementX, e.movementY); }
     this.ui.cursorWorld = this.vp.screenToWorld(this.mouse.x, this.mouse.y);
+    if (this.ui.drag) { const d = this.ui.drag; d.fx = this.ui.cursorWorld.x; d.fz = this.ui.cursorWorld.z; d.active = dist(d, { x: d.fx, z: d.fz }) > 0.6; }
     this.ui.hover = this.pick(this.ui.cursorWorld);
   }
 
@@ -86,13 +87,15 @@ export class Input {
       if (!sel) return;
       if (this.ui.armed) { this.ui.armed = null; return; }
       if (sel.carrying && h.kind === 'bush') { this.sim.orderDropAt(sel.id, h.pos, this.ui.viewLayer, append); return; }
-      this.sim.orderMove(sel.id, p, this.ui.viewLayer, append);
+      // hold and drag to choose the facing on arrival; the order is issued on release
+      this.ui.drag = { x: p.x, z: p.z, fx: p.x, fz: p.z, append, active: false };
+      try { this.canvas.setPointerCapture(e.pointerId); } catch { /* not supported */ }
       return;
     }
     if (e.button !== 0) return;
     if (this.ui.armed && sel) {
       const a = this.ui.armed;
-      if (a === 'stone' || a === 'smoke') this.sim.orderAbility(sel.id, a, p, append);
+      if (a === 'stone' || a === 'smoke') { if (this.ui.viewLayer !== sel.layer) { this.hud.toast(`Aim on ${sel.name}'s own layer (Tab).`, 'warn'); return; } this.sim.orderAbility(sel.id, a, p, append); }
       else if (a === 'takedown' && h.kind === 'enemy') this.sim.orderTakedown(sel.id, h.id, append);
       else if (a === 'lockpick' && h.kind === 'door') this.sim.orderUseDoor(sel.id, h.id, append);
       else { this.hud.toast('Pick a valid target.', 'warn'); return; }
@@ -111,7 +114,16 @@ export class Input {
       default: return;
     }
   }
-  onUp(e) { if (e.button === 1) this.mouse.panning = false; }
+  onUp(e) {
+    if (e.button === 1) this.mouse.panning = false;
+    if (e.button === 2 && this.ui.drag) {
+      const d = this.ui.drag; this.ui.drag = null;
+      try { this.canvas.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
+      const sel = this.selected; if (!sel) return;
+      const face = d.active ? Math.atan2(d.fz - d.z, d.fx - d.x) : null;
+      this.sim.orderMove(sel.id, { x: d.x, z: d.z }, this.ui.viewLayer, d.append, face);
+    }
+  }
 
   onWheel(e) {
     e.preventDefault();
@@ -119,8 +131,7 @@ export class Input {
     const dir = e.deltaY > 0 ? -1 : 1;
     if (this.ui.hover && this.ui.hover.kind === 'waypoint' && sel) {
       const o = sel.orders[this.ui.hover.idx];
-      if (o && o.type === 'move') { this.sim.setWait(sel.id, this.ui.hover.idx, o.wait + dir * 0.5); this.ui.hover = this.pick(this.ui.cursorWorld); }
-      return;
+      if (o && o.type === 'move') { this.sim.setWait(sel.id, this.ui.hover.idx, o.wait + dir * 0.5); this.ui.hover = this.pick(this.ui.cursorWorld); return; }
     }
     if (e.ctrlKey && sel) { this.sim.setDelay(sel.id, sel.delay + dir * 0.5); return; }
     this.vp.zoomAt(this.mouse.x, this.mouse.y, dir > 0 ? 1.15 : 1 / 1.15);
@@ -136,7 +147,7 @@ export class Input {
     if (e.key === 'F9') { e.preventDefault(); this.game.quickload(); return; }
     if (e.key === 'F1') { e.preventDefault(); this.hud.toggleHelp(); return; }
     if (e.key === 'F2') { e.preventDefault(); this.ui.reveal = !this.ui.reveal; this.hud.toast(this.ui.reveal ? 'Reveal mode ON (design view: no fog, all enemies shown)' : 'Reveal mode off', 'info'); return; }
-    if (e.key === 'Escape') { if (this.ui.armed) this.ui.armed = null; else if (this.hud.helpOpen) this.hud.toggleHelp(); else this.ui.selectedId = null; return; }
+    if (e.key === 'Escape') { if (this.ui.drag) this.ui.drag = null; else if (this.ui.armed) this.ui.armed = null; else if (this.hud.helpOpen) this.hud.toggleHelp(); else this.ui.selectedId = null; return; }
     if (e.key === 'Tab') { e.preventDefault(); const ids = this.sim.world.layerIds; const i = ids.indexOf(this.ui.viewLayer); this.ui.viewLayer = ids[(i + 1) % ids.length]; this.ui.followLayer = false; return; }
     if (k >= '1' && k <= '4') { const c = s.chars[Number(k) - 1]; if (c) { this.select(c.id); this.ui.followLayer = true; } return; }
     if (s.status !== 'playing') { if (k === 'r') this.game.restart(); return; }
@@ -148,7 +159,7 @@ export class Input {
     for (const [ab, def] of Object.entries(ABILITIES)) {
       if (k === def.key.toLowerCase()) {
         if (!sel.abilities.includes(ab)) { this.hud.toast(`${sel.name} has no ${def.name}.`, 'warn'); return; }
-        if (ab === 'whistle') { this.sim.orderAbility(sel.id, 'whistle', null, e.shiftKey); return; }
+        if (def.self) { this.sim.orderAbility(sel.id, ab, null, e.shiftKey); return; }
         this.ui.armed = this.ui.armed === ab ? null : ab;
         return;
       }

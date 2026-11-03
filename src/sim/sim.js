@@ -4,7 +4,7 @@ import { visionSegments, rebuildGrid, bushAt, locationAt } from '../world/map.js
 import { routeLayers } from '../world/nav.js';
 import { visibilityPolygon, hasLOS, inCone } from '../world/vision.js';
 import { ENEMY_TYPES, NEAR_ZONE, NEAR_RATE, FAR_RATE_NEAR, FAR_RATE_FAR, DECAY, SUSPICIOUS_AT, CALM_AT } from './enemies.js';
-import { sneakSpeed, runSpeed, viewRange, stealthMult, takedownTime, canCarry, canLift, canClimbVine } from './characters.js';
+import { ABILITIES, sneakSpeed, runSpeed, viewRange, stealthMult, takedownTime, canCarry, canLift, canClimbVine } from './characters.js';
 
 export const DT = 1 / 60;
 export const SAVE_VERSION = 1;
@@ -23,6 +23,8 @@ export class Sim {
     this.state = this.makeInitialState(squad);
     this.view = { cones: {}, squadVision: {}, enemyVisible: {} };
     this.segCache = {};
+    // the nav grids live on the shared world: rebuild them from this mission's door state (a restart must re-lock doors)
+    for (const id of world.layerIds) rebuildGrid(world, id, this.doorMap());
     this.rebuildSegments();
     this.computeView();
   }
@@ -31,10 +33,10 @@ export class Sim {
     const w = this.world;
     const chars = squad.map((c, i) => ({
       id: c.id, name: c.name, epithet: c.epithet, color: c.color, attrs: { ...c.attrs }, abilities: c.abilities.slice(),
-      consumables: { stone: this.opts.stones, smoke: this.opts.smoke },
+      consumables: { stone: this.opts.stones, smoke: this.opts.smoke, sprint: ABILITIES.sprint.charges, ghost: ABILITIES.ghost.charges },
       layer: w.start.layer, x: w.start.x + (i % 2) * 2.0 - 1.0, z: w.start.z + Math.floor(i / 2) * 2.0 - 1.0, facing: -Math.PI / 2,
       stance: 'sneak', orders: [], legs: null, delay: 0, waitLeft: 0, action: null, carrying: null, hidden: false, moving: false,
-      inventory: [], runNoiseT: 0, planT: 0,
+      inventory: [], runNoiseT: 0, planT: 0, boost: null, loud: false,
     }));
     const enemies = w.enemies.map((e) => {
       const p0 = e.route[0];
@@ -98,10 +100,11 @@ export class Sim {
     if (!append) { c.orders = []; c.legs = null; c.action = null; c.waitLeft = 0; }
     c.orders.push(order);
   }
-  orderMove(charId, pt, layer, append) {
+  /** `face` (radians, optional) is the direction to face on arrival (right-click drag). */
+  orderMove(charId, pt, layer, append, face = null) {
     const c = this.char(charId);
     if (!this.grid(layer).nearestWalkable(pt.x, pt.z, 4)) { this.msg('Cannot go there.', 'warn'); return; }
-    this._push(c, { type: 'move', x: pt.x, z: pt.z, layer, wait: 0 }, append);
+    this._push(c, { type: 'move', x: pt.x, z: pt.z, layer, wait: 0, face }, append);
   }
   orderUseTransition(charId, id, append) {
     const c = this.char(charId); const t = this.world.transitionById[id];
@@ -158,19 +161,24 @@ export class Sim {
   }
   dropNow(charId) {
     const c = this.char(charId);
-    if (!c.carrying) return;
+    if (!c.carrying || this.blocked()) return;
     this.dropBody(c);
   }
   orderAbility(charId, ability, pt, append) {
     const c = this.char(charId);
     if (!c.abilities.includes(ability)) { this.msg(`${c.name} has no ${ability}.`, 'warn'); return; }
     if (c.consumables[ability] !== undefined && c.consumables[ability] <= 0) { this.msg(`${c.name} is out of ${ability}s.`, 'warn'); return; }
-    if (ability === 'whistle') { this._push(c, { type: 'ability', ability, x: c.x, z: c.z, layer: c.layer, duration: 0.5, label: 'Whistle', self: true }, append); return; }
+    const def = ABILITIES[ability];
+    if (def.self) { this._push(c, { type: 'ability', ability, x: c.x, z: c.z, layer: c.layer, duration: ability === 'whistle' ? 0.5 : 0.15, label: def.name, self: true }, append); return; }
     this._push(c, { type: 'ability', ability, x: pt.x, z: pt.z, layer: c.layer, duration: 0.6, label: ability === 'stone' ? 'Throw stone' : 'Smoke bomb', range: ABILITY_RANGE[ability] }, append);
   }
   setWait(charId, idx, wait) { if (this.blocked()) return; const c = this.char(charId); const o = c.orders[idx]; if (o && o.type === 'move') o.wait = clamp(wait, 0, 60); }
-  setDelay(charId, delay) { if (this.blocked()) return; const c = this.char(charId); c.delay = clamp(delay, 0, 60); c.delayTotal = c.delay; }
-  clearOrders(charId) { const c = this.char(charId); if (c.orders.length) this.fx.cancel[charId] = performance.now(); c.orders = []; c.legs = null; c.action = null; c.waitLeft = 0; c.delay = 0; }
+  setDelay(charId, delay) {
+    if (this.blocked()) return; const c = this.char(charId);
+    if (c.orders.length && c.orders[0].started) { this.msg('The queue has already started; a delay applies to the next one.', 'info'); return; }
+    c.delay = clamp(delay, 0, 60); c.delayTotal = c.delay;
+  }
+  clearOrders(charId) { if (this.blocked()) return; const c = this.char(charId); if (c.orders.length) this.fx.cancel[charId] = performance.now(); c.orders = []; c.legs = null; c.action = null; c.waitLeft = 0; c.delay = 0; }
   fireEvent(key) {
     const ev = this.world.events[key];
     if (!ev || this.state.firedEvents[key]) return;
@@ -183,7 +191,7 @@ export class Sim {
     }
     if (ev.message) this.msg(ev.message, 'event');
   }
-  toggleStance(charId) { const c = this.char(charId); c.stance = c.stance === 'sneak' ? 'run' : 'sneak'; }
+  toggleStance(charId) { if (this.blocked()) return; const c = this.char(charId); c.stance = c.stance === 'sneak' ? 'run' : 'sneak'; }
 
   canUseTransition(c, t) {
     const meets = !t.req || c.attrs[t.req.attr] >= t.req.min;
@@ -235,7 +243,8 @@ export class Sim {
   updateChar(c, dt) {
     const s = this.state;
     c.hidden = !!bushAt(this.world, c.layer, c);
-    c.moving = false;
+    c.moving = false; c.loud = false;
+    if (c.boost && c.boost.tEnd <= s.t) { c.boost = null; }
     s.stats.layers[c.layer] = true;
     if (c.carrying) { const e = this.enemy(c.carrying); e.x = c.x; e.z = c.z; e.layer = c.layer; }
     if (c.delay > 0) { c.delay = Math.max(0, c.delay - dt); return; }
@@ -277,7 +286,8 @@ export class Sim {
       for (const p of o.approach) {
         const legs = this.planLegs(c, o.layer, p);
         if (!legs) continue;
-        const l = legs.reduce((a, L) => a + L.path.length, 0);
+        let l = 0, from = { x: c.x, z: c.z };
+        for (const L of legs) { l += pathLength(from, L.path) + (L.transition ? 3 : 0); if (L.toSide) from = { x: L.toSide.x, z: L.toSide.z }; }
         if (l < bestLen) { bestLen = l; best = legs; }
       }
       if (!best) { this.msg(`${c.name}: no route to ${o.label}.`, 'warn'); return false; }
@@ -309,7 +319,9 @@ export class Sim {
       return;
     }
     const target = leg.path[0];
-    const speed = (c.stance === 'run' ? runSpeed(c) : sneakSpeed(c)) * (c.carrying ? 0.7 : 1);
+    const boost = c.boost ? c.boost.kind : null;
+    const base = boost === 'sprint' ? runSpeed(c) * 1.7 : (boost === 'ghost' || c.stance === 'run') ? runSpeed(c) : sneakSpeed(c);
+    const speed = base * (c.carrying ? 0.7 : 1);
     const d = dist(c, target);
     const step = speed * dt;
     const dir = norm(sub(target, c));
@@ -317,12 +329,14 @@ export class Sim {
     else { c.x += dir.x * step; c.z += dir.z * step; }
     if (d > 0.01) c.facing = turnToward(c.facing, angleOf(dir), 10 * dt);
     c.moving = true;
-    if (c.stance === 'run') { c.runNoiseT -= dt; if (c.runNoiseT <= 0) { c.runNoiseT = 0.5; this.emitNoise(c.x, c.z, c.layer, NOISE.run, 'steps', false); } }
+    c.loud = boost === 'sprint' || (c.stance === 'run' && boost !== 'ghost'); // loud = detected like running and makes step noise
+    if (c.loud) { c.runNoiseT -= dt; if (c.runNoiseT <= 0) { c.runNoiseT = 0.5; this.emitNoise(c.x, c.z, c.layer, NOISE.run, 'steps', false); } }
   }
 
   onArrive(c, o) {
     switch (o.type) {
       case 'move':
+        if (o.face != null) c.facing = o.face;
         if (o.wait > 0) { c.waitLeft = o.wait; } else c.orders.shift();
         return;
       case 'use':
@@ -441,6 +455,11 @@ export class Sim {
         s.smokes.push({ x: a.x, z: a.z, layer: c.layer, r: 5, tEnd: s.t + 8 });
         this.msg(`${c.name} drops a smoke bomb.`, 'info');
         return;
+      case 'sprint': case 'ghost':
+        c.consumables[a.ability]--;
+        c.boost = { kind: a.ability, tEnd: s.t + ABILITIES[a.ability].duration };
+        this.msg(a.ability === 'sprint' ? `${c.name} sprints.` : `${c.name} moves like a ghost.`, 'info');
+        return;
       case 'whistle':
         s.noises.push({ x: c.x, z: c.z, layer: c.layer, r: NOISE.whistle, t: s.t, kind: 'whistle' });
         this.notifyNoise({ x: c.x, z: c.z, layer: c.layer, r: NOISE.whistle, kind: 'whistle', nearestOnly: true });
@@ -466,6 +485,7 @@ export class Sim {
     if (n.nearestOnly) { cands.sort((a, b) => a.d - b.d); cands = cands.slice(0, 1); }
     for (const { e } of cands) {
       const T = ENEMY_TYPES[e.type];
+      if (e.state === 'suspicious') continue;
       if (T.stationary || T.ignoresDistraction) { e.alertLook = { ang: angleOf(sub(n, e)), t: 3 }; continue; }
       if (e.state === 'suspicious') continue;
       if (e.state === 'patrol') e.prevState = 'patrol';
@@ -493,11 +513,11 @@ export class Sim {
       const nearR = T.range * NEAR_ZONE;
       const still = !c.moving;
       let zone, stance;
-      if (d <= nearR) { zone = NEAR_RATE; stance = c.stance === 'run' ? 1.6 : still ? 0.7 : 1.0; }
+      if (d <= nearR) { zone = NEAR_RATE; stance = c.loud ? 1.6 : still ? 0.7 : 1.0; }
       else {
         if (still) continue; // far zone detects movement only (design 5.1)
         const f = (d - nearR) / (T.range - nearR); zone = FAR_RATE_NEAR + (FAR_RATE_FAR - FAR_RATE_NEAR) * f;
-        stance = c.stance === 'run' ? 1.6 : 1.0;
+        stance = c.loud ? 1.6 : 1.0;
       }
       const rate = T.baseRate * zone * stance * stealthMult(c) * this.opts.detectMult;
       if (rate > maxRate) { maxRate = rate; seen = c; }
@@ -530,7 +550,7 @@ export class Sim {
     }
     if (e.state === 'investigate') {
       if (!e.path) { e.path = this.grid(e.layer).findPath(e, e.investigatePt); if (!e.path) { e.state = 'patrol'; return; } }
-      this.moveEnemy(e, dt, T.speed * 1.3, T.turnRate);
+      if (e.path.length) this.moveEnemy(e, dt, T.speed * 1.3, T.turnRate);
       if (e.path.length === 0) { e.state = 'look'; e.lookLeft = T.lookTime; e.lookBase = e.facing; e.path = null; }
       return;
     }

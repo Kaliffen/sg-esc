@@ -10,13 +10,17 @@ export const ABILITIES = {
   stone:    { name: 'Throw Stone', key: 'S', desc: 'Noise at a point up to 12 m away. Nearby enemies investigate. 3 stones.' },
   lockpick: { name: 'Lockpick', key: 'L', desc: 'Open a locked door or gate (3 s).' },
   smoke:    { name: 'Smoke Bomb', key: 'B', desc: '5 m smoke cloud for 8 s, blocks sight both ways. 1 bomb.' },
-  whistle:  { name: 'Whistle', key: 'W', desc: 'Lure the nearest enemy within 14 m to your position.' },
+  whistle:  { name: 'Whistle', key: 'W', desc: 'Lure the nearest enemy within 14 m to your position.', self: true },
+  // Rare speed skills (about one character in eight rolls one as a third skill)
+  sprint:   { name: 'Sprint', key: 'V', desc: 'Rare. For 3 s move at 1.7x run speed. Loud and easy to spot, like running. 2 per map.', self: true, rare: true, duration: 3, charges: 2 },
+  ghost:    { name: 'Stealth Sprint', key: 'G', desc: 'Rare. For 2.5 s move at run speed silently and counted as sneaking. 1 per map.', self: true, rare: true, duration: 2.5, charges: 1 },
 };
 export const ATTRS = ['stealth', 'speed', 'perception', 'strength', 'agility'];
 export const ATTR_SHORT = { stealth: 'STL', speed: 'SPD', perception: 'PER', strength: 'STR', agility: 'AGI' };
 
-export function sneakSpeed(c) { return 1.6 + 0.08 * c.attrs.speed; }
-export function runSpeed(c) { return 3.4 + 0.16 * c.attrs.speed; }
+// Wide spread on purpose: SPD 1 sneaks at 1.3 m/s and runs at 3.1, SPD 10 sneaks at 2.6 and runs at 5.6.
+export function sneakSpeed(c) { return 1.2 + 0.14 * c.attrs.speed; }
+export function runSpeed(c) { return 2.8 + 0.28 * c.attrs.speed; }
 export function viewRange(c) { return 9 + 0.8 * c.attrs.perception; }
 export function stealthMult(c) { return 1.3 - 0.06 * c.attrs.stealth; }
 export function takedownTime(c) { return 1.1 - 0.04 * c.attrs.agility; }
@@ -38,8 +42,9 @@ export function generateRoster(seed = Date.now() & 0xffffffff, count = 8) {
   const names = rng.shuffle(NAMES).slice(0, count);
   const roster = [];
   for (let i = 0; i < count; i++) {
-    const abilityKeys = Object.keys(ABILITIES);
+    const abilityKeys = Object.keys(ABILITIES).filter((k) => !ABILITIES[k].rare);
     const abilities = rng.shuffle(abilityKeys).slice(0, 2);
+    if (rng.next() < 0.12) abilities.push(rng.pick(Object.keys(ABILITIES).filter((k) => ABILITIES[k].rare)));
     roster.push({
       id: `c${i}`,
       name: names[i],
@@ -50,15 +55,19 @@ export function generateRoster(seed = Date.now() & 0xffffffff, count = 8) {
     });
   }
   // Coverage guarantees
+  const have = (ab) => roster.filter((c) => c.abilities.includes(ab)).length;
   const ensureAbility = (ab) => {
-    if (roster.some((c) => c.abilities.includes(ab))) return;
-    const c = rng.pick(roster);
+    if (have(ab)) return;
+    // overwrite a slot whose ability is not the roster's only copy, so earlier guarantees survive
+    const cands = roster.filter((c) => have(c.abilities[1]) > 1);
+    const c = cands.length ? rng.pick(cands) : rng.pick(roster);
     c.abilities[1] = ab;
   };
   ensureAbility('takedown'); ensureAbility('lockpick'); ensureAbility('stone'); ensureAbility('smoke'); ensureAbility('whistle');
   // at least two takedown specialists for the gate puzzle
   if (roster.filter((c) => c.abilities.includes('takedown')).length < 2) {
-    const c = roster.find((c) => !c.abilities.includes('takedown'));
+    const cands = roster.filter((c) => !c.abilities.includes('takedown') && have(c.abilities[0]) > 1);
+    const c = cands[0] || roster.find((c) => !c.abilities.includes('takedown'));
     c.abilities[0] = 'takedown';
   }
   const ensureAttr = (attr, min) => {

@@ -25,6 +25,13 @@ then open http://localhost:8080/play.html (any static server works; ES modules n
 - The browser console prints `VEIL ready: ...` after the first frame and `JSERROR ...` on uncaught errors.
 - Node can import everything under `src/sim`, `src/world`, `src/core` (no three.js there), so the simulation can be scripted and asserted without a browser.
 
+## Headless tests (no browser)
+    node tools/e2e.mjs          # lose, save/load, features, full win (about a minute)
+    node tools/e2e.mjs win -v   # one scenario, verbose
+    node tools/explore.mjs      # routing questions and enemy timing table
+`tools/driver.mjs` is the remote control: it runs `src/sim` in Node with orders, inspection, snapshot/restore and a
+speculative `attempt()` (snapshot, try a hop, restore and retry later if spotted). The win scenario is a real playthrough.
+
 ## Folder notes
 - `assets/` — concept art used by the landing page.
 - `design.md.pre-shadow-gambit.bak` — the design doc before the Shadow Gambit research was merged into it.

@@ -43,8 +43,7 @@ export class Hud {
       case 'stance': this.sim.toggleStance(sel.id); break;
       case 'hold': this.sim.clearOrders(sel.id); break;
       case 'drop': this.sim.dropNow(sel.id); break;
-      case 'whistle': this.sim.orderAbility(sel.id, 'whistle', null, false); break;
-      default: if (ABILITIES[act]) ui.armed = ui.armed === act ? null : act;
+      default: if (ABILITIES[act] && ABILITIES[act].self) this.sim.orderAbility(sel.id, act, null, false); else if (ABILITIES[act]) ui.armed = ui.armed === act ? null : act;
     }
   }
   orderOp(op, idx, delta) {
@@ -73,14 +72,16 @@ export class Hud {
     el('cursor-hint').textContent = ui.armed ? `${ABILITIES[ui.armed].name}: click a target (Esc to cancel)` : (ui.hover?.label || '');
     el('cursor-hint').style.left = `${this.input.mouse.x + 16}px`; el('cursor-hint').style.top = `${this.input.mouse.y + 18}px`;
     // portraits
-    const sig = s.chars.map((c) => `${c.id}${c.id === ui.selectedId ? '*' : ''}${c.stance}${c.hidden ? 'h' : ''}${c.carrying || ''}${c.inventory.join()}${c.consumables.stone}${c.consumables.smoke}${c.orders.length}${c.delay.toFixed(1)}${c.layer}`).join('|') + `|${ui.armed}|${s.status}`;
+    const sig = s.chars.map((c) => `${c.id}${c.id === ui.selectedId ? '*' : ''}${c.stance}${c.boost ? c.boost.kind : ''}${c.hidden ? 'h' : ''}${c.carrying || ''}${c.inventory.join()}${c.consumables.stone}${c.consumables.smoke}${c.consumables.sprint}${c.consumables.ghost}${c.orders.length}${c.delay.toFixed(1)}${c.layer}`).join('|') + `|${ui.armed}|${s.status}`;
     if (sig !== this.lastSig) { this.lastSig = sig; this.renderPortraits(); this.renderActions(); }
     this.renderOrders();
     // world labels
     this.renderLabels(renderer);
     // overlay
     const ov = el('overlay');
-    if (s.status === 'failed') { ov.classList.remove('hidden'); ov.innerHTML = `<div class="panel fail"><h1>SPOTTED</h1><p>${s.failReason}</p><p class="muted">You lose the map when the alarm is raised. Learn the cone, try again.</p><div class="row"><button data-action="load">Quickload (F9)</button><button data-action="restart">Restart map (R)</button><button data-action="squad">Change squad</button></div></div>`; }
+    const ovSig = `${s.status}|${s.failReason}|${JSON.stringify(this.game.lastBadges)}`;
+    if (ovSig === this.ovSig) { /* overlay already rendered for this state */ }
+    else if ((this.ovSig = ovSig, s.status === 'failed')) { ov.classList.remove('hidden'); ov.innerHTML = `<div class="panel fail"><h1>SPOTTED</h1><p>${s.failReason}</p><p class="muted">You lose the map when the alarm is raised. Learn the cone, try again.</p><div class="row"><button data-action="load">Quickload (F9)</button><button data-action="restart">Restart map (R)</button><button data-action="squad">Change squad</button></div></div>`; }
     else if (s.status === 'won') {
       const b = this.game.lastBadges || {};
       const badges = Object.entries(b).map(([k, on]) => `<span class="badge ${on ? 'on' : ''}">${k}</span>`).join('');
@@ -96,7 +97,7 @@ export class Hud {
         <div class="pkey">${i + 1}</div>
         <div class="pdot"></div>
         <div class="pname">${c.name}</div>
-        <div class="pinfo">${c.stance === 'run' ? 'RUN' : 'sneak'}${c.hidden ? ' · hidden' : ''}${c.carrying ? ' · carrying' : ''}${c.inventory.length ? ' · 🔑' : ''}</div>
+        <div class="pinfo">${c.boost ? (c.boost.kind === 'sprint' ? 'SPRINT' : 'GHOST STEP') : c.stance === 'run' ? 'RUN' : 'sneak'}${c.hidden ? ' · hidden' : ''}${c.carrying ? ' · carrying' : ''}${c.inventory.length ? ' · 🔑' : ''}</div>
         <div class="pattrs">${ATTRS.map((a) => `<span title="${a}">${ATTR_SHORT[a]} ${c.attrs[a]}</span>`).join('')}</div>
         <div class="pabil">${c.abilities.map((a) => ABILITIES[a].name + (c.consumables[a] !== undefined ? ` ×${c.consumables[a]}` : '')).join(' · ')}</div>
       </div>`).join('');

@@ -80,7 +80,7 @@ export const MAP = {
       name: 'Rooftops',
       floorsBlockVision: false,
       floors: [
-        floor(4, 70, 30, 38, 'Warehouse roof'), floor(34, 100, 62, 10, 'South row roofs'),
+        floor(4, 70, 30, 38, 'Warehouse roof'), floor(32, 100, 66, 10, 'South row roofs') /* overlaps the warehouse and smithy roofs so the rooftop route connects */,
         floor(96, 96, 14, 12, 'Smithy roof'), floor(114, 74, 32, 32, 'Guardhouse roof'), floor(104, 76, 4, 4, 'Watchtower top'),
       ],
       obstacles: [wall(20, 84, 4, 4, 'Chimney'), wall(60, 103, 3, 3, 'Chimney'), wall(126, 88, 4, 4, 'Skylight')],

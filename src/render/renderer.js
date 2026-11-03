@@ -9,6 +9,7 @@ const Y = { ground: 0, floor: 0.01, exit: 0.03, bush: 0.3, cone: 0.15, door: 0.5
 
 function circleGeo(r, n = 28) { const g = new THREE.CircleGeometry(r, n); g.rotateX(-Math.PI / 2); return g; }
 function ringGeo(r0, r1, n = 32, thetaLength = Math.PI * 2) { const g = new THREE.RingGeometry(r0, r1, n, 1, 0, thetaLength); g.rotateX(-Math.PI / 2); return g; }
+function arrowGeo(len = 0.9, w = 0.5) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array([len, 0, 0, 0, 0, -w / 2, 0, 0, w / 2]), 3)); return g; }
 function planeGeo(w, h) { const g = new THREE.PlaneGeometry(w, h); g.rotateX(-Math.PI / 2); return g; }
 function mat(color, opacity = 1, extra = {}) { return new THREE.MeshBasicMaterial({ color, transparent: opacity < 1 || !!extra.transparent, opacity, depthWrite: false, side: THREE.DoubleSide, ...extra }); }
 function mesh(geo, m, x = 0, y = 0, z = 0) { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); return o; }
@@ -72,7 +73,7 @@ export class Renderer {
     this.labels = [];
     this.layerGroups = {}; this.fog = {}; this.doorMeshes = {}; this.transMeshes = {}; this.itemMeshes = {}; this.interMeshes = {};
     this.charObjs = {}; this.enemyObjs = {}; this.ghostObjs = {};
-    this.noisePool = []; this.smokePool = []; this.wpPool = [];
+    this.noisePool = []; this.smokePool = []; this.wpPool = []; this.facePool = [];
     this.pathLine = null;
     this.timeSinceStart = 0;
     for (const id of world.layerIds) this.buildLayer(id);
@@ -141,6 +142,12 @@ export class Renderer {
     this.pathLine.position.y = Y.line; this.pathLine.frustumCulled = false; this.dyn.add(this.pathLine);
     this.hoverRing = mesh(ringGeo(0.7, 0.85), mat(0xffffff, 0.7), 0, Y.ui, 0); this.hoverRing.visible = false; this.dyn.add(this.hoverRing);
     this.armRing = mesh(ringGeo(0.2, 0.3), mat(0xffffff, 0.6), 0, Y.ui, 0); this.armRing.visible = false; this.dyn.add(this.armRing);
+    // right-click drag gizmo: ring at the destination, line and arrow toward the facing
+    const gz = new THREE.Group(); gz.name = 'drag';
+    gz.add(mesh(ringGeo(0.3, 0.42), mat(0xffffff, 0.9), 0, Y.ui, 0));
+    const arrow = mesh(arrowGeo(1.0, 0.6), mat(0xffd54f, 0.95), 0, Y.ui + 0.01, 0); arrow.name = 'arrow'; gz.add(arrow);
+    const dl = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffd54f, transparent: true, opacity: 0.85 })); dl.name = 'line'; dl.frustumCulled = false; gz.add(dl);
+    gz.visible = false; this.dragGizmo = gz; this.dyn.add(gz);
   }
 
   makeChar(c) {
@@ -253,6 +260,7 @@ export class Renderer {
     }
     // selected char orders
     this.drawOrders(sim, ui);
+    this.drawDrag(ui);
     // noises
     this.drawPool(this.noisePool, s.noises.filter((n) => n.layer === L), (n, m) => {
       const age = (s.t - n.t) / 1.2; m.scale.setScalar(Math.max(0.05, n.r * age)); m.position.set(n.x, Y.ui, n.z); m.material.opacity = 0.5 * (1 - age);
@@ -286,6 +294,18 @@ export class Renderer {
     while (pool.length < items.length) { const m = make(); this.dyn.add(m); pool.push(m); }
     pool.forEach((m, i) => { if (i < items.length) { m.visible = true; apply(items[i], m); } else m.visible = false; });
   }
+  drawDrag(ui) {
+    const g = this.dragGizmo, d = ui.drag;
+    if (!d) { g.visible = false; return; }
+    g.visible = true; g.position.set(d.x, 0, d.z);
+    const arrow = g.getObjectByName('arrow'), line = g.getObjectByName('line');
+    arrow.visible = d.active; line.visible = d.active;
+    if (!d.active) return;
+    const ang = Math.atan2(d.fz - d.z, d.fx - d.x), L = Math.min(6, Math.hypot(d.fx - d.x, d.fz - d.z));
+    arrow.rotation.y = -ang; arrow.position.set(Math.cos(ang) * L, Y.ui + 0.01, Math.sin(ang) * L);
+    line.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, Y.ui, 0, Math.cos(ang) * L, Y.ui, Math.sin(ang) * L]), 3));
+    line.geometry.computeBoundingSphere();
+  }
   drawOrders(sim, ui) {
     const c = ui.selectedId && sim.char(ui.selectedId);
     const pts = [];
@@ -318,5 +338,8 @@ export class Renderer {
       if (mk.o.label) txt += ` · ${mk.o.label}`;
       this.labels.push({ x: mk.o.x, z: mk.o.z + 0.8, text: txt, cls: 'lbl-wp' });
     }, () => mesh(circleGeo(0.32), mat(0xffffff, 0.9), 0, Y.ui, 0));
+    // arrows on waypoints that carry a facing
+    const faced = markers.filter((mk) => mk.o.type === 'move' && mk.o.face != null);
+    this.drawPool(this.facePool, faced, (mk, m) => { m.position.set(mk.o.x, Y.ui + 0.01, mk.o.z); m.rotation.y = -mk.o.face; }, () => mesh(arrowGeo(1.1, 0.55), mat(0xffd54f, 0.95), 0, Y.ui, 0));
   }
 }

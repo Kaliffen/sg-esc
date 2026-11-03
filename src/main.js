@@ -115,6 +115,7 @@ class Game {
     if (!this.sim || !this.quick) { if (this.hud) this.hud.toast('No quicksave yet (F5).', 'warn'); return; }
     if (!this.sim.restore(this.quick)) return;
     this.lastSaveT = this.sim.state.t;
+    this.lastBadges = null; // a win after this load is a new win
     this.input.ui.paused = true;
     this.hud.toast('Quickloaded (paused).', 'good');
   }

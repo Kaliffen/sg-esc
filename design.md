@@ -61,7 +61,7 @@ Select squad (roster) ─► Infiltration map
 | Attribute | Effect |
 |---|---|
 | **Stealth** | Multiplies how fast enemies' detection meters fill when they see you: `rate × (1.30 − 0.06·STL)`. 10 ⇒ 0.70, 1 ⇒ 1.24. |
-| **Speed** | Sneak speed `1.6 + 0.08·SPD` m/s, run speed `3.4 + 0.16·SPD` m/s. |
+| **Speed** | Sneak speed `1.2 + 0.14·SPD` m/s (1.3 to 2.6), run speed `2.8 + 0.28·SPD` m/s (3.1 to 5.6). The spread is wide on purpose: a slow character changes the route, not just the timing. |
 | **Perception** | Own view range `9 + 0.8·PER` m (120° FOV). Governs what the squad reveals. |
 | **Strength** | ≥5 can carry bodies. ≥7 can lift sewer grates. |
 | **Agility** | ≥7 can climb vines. Takedown takes `1.1 − 0.04·AGI` s. |
@@ -74,6 +74,10 @@ Select squad (roster) ─► Infiltration map
 | **Lockpick** | L / left-click door | locked door | Opens locked doors/gates without a key. Takes 3 s standing at the door. |
 | **Smoke Bomb** | B | ground point ≤10 m | 5 m radius cloud for 8 s. Blocks line of sight both ways. 1 bomb. |
 | **Whistle** | W | self | Lures the single nearest enemy within 14 m to walk to the whistler's position and look around. Riskier than a stone (they come to *you*), but no consumable. |
+| **Sprint** (rare) | V | self | For 3 s move at 1.7× run speed. Loud and detected like running. 2 per map. |
+| **Stealth Sprint** (rare) | G | self | For 2.5 s move at run speed, silent and detected like sneaking. 1 per map. |
+
+Rare skills: about one character in eight rolls one as a third skill. They never replace the two base skills, so roster coverage is unchanged.
 
 Every character can: sneak, run, hide in bushes, use ladders/stairs/hatches, pick up items, use levers, carry a body (STR≥5), and drop a body in a bush or into water.
 
@@ -148,6 +152,7 @@ All orders can be issued while paused. Unpausing executes them.
 |---|---|
 | Left click character / portrait / `1–4` | Select |
 | Right click ground | Move here (replaces current orders) |
+| **Right click + drag** | Move here and face the drag direction on arrival. A gizmo (ring, line, arrow) shows the spot and the facing while held; the waypoint keeps the arrow after release. |
 | **Shift** + right click | Append waypoint |
 | Hover a waypoint + wheel | Adjust wait time at that waypoint (±0.5 s) |
 | **Ctrl** + wheel | Adjust start delay of the selected character's orders |
@@ -252,6 +257,8 @@ src/render/renderer.js     scene graph sync from state, cones, markers, ghosts, 
 src/ui/input.js            mouse/keyboard → orders, armed abilities, hover context
 src/ui/hud.js              portraits, action bar, order panel, toasts, overlays
 src/ui/squad-select.js     roster screen
+tools/driver.mjs           headless remote control: runs src/sim in Node (orders, inspection, snapshot/restore, speculative attempt)
+tools/e2e.mjs              end-to-end scenarios without a browser: lose, save/load, features, full win (node tools/e2e.mjs)
 ```
 
 ### 9.3 Vision & fog implementation
