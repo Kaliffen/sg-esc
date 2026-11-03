@@ -43,8 +43,8 @@ button.primary:hover{background:var(--amber2)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .card img{width:100%;aspect-ratio:3/2;object-fit:cover;display:block}
-.card.tall img{aspect-ratio:2/3}
-.card .cap{padding:12px 14px}
+.card.tall img{object-position:center 22%}
+.card{display:flex;flex-direction:column}.card .cap{padding:12px 14px;flex:1}
 .card .cap b{display:block;color:#efe6d2;margin-bottom:4px}
 .card .cap span{color:var(--ink2);font-size:13.5px}
 .pillars{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
@@ -126,6 +126,16 @@ footer{color:var(--dim);font-size:13px;padding:24px;text-align:center;border-top
       </div>
     </section>
 
+    <section class="sec two flip">
+      <div>
+        <div class="kicker">The prototype, running</div>
+        <h2>Metres and seconds. The picture is only a view of the state.</h2>
+        <p>Reveal mode (F2) with the fog off: fifteen enemies, every cone drawn, three layers under one camera. Solid wedge near the guard, striped wedge beyond it. The simulation is plain data, so a quicksave is a copy and a quickload is a swap.</p>
+        <p>Dev flags for studying the map: <code>play.html?auto=3&amp;sim=20&amp;reveal</code> skips the squad select, fast-forwards 20 s and reveals everything. <code>&amp;layer=-1</code> views the sewers, <code>&amp;cx=80&amp;cz=55&amp;ppm=8</code> places the camera.</p>
+      </div>
+      <img src="assets/11-prototype-reveal.png" alt="The prototype in reveal mode: the whole town with every guard cone drawn">
+    </section>
+
     <section class="sec">
       <div>
         <div class="kicker">Controls</div>
@@ -134,10 +144,11 @@ footer{color:var(--dim);font-size:13px;padding:24px;text-align:center;border-top
           <tr><td>Right click</td><td>Move here. <b>Shift</b> appends a waypoint.</td></tr>
           <tr><td>Wheel over a waypoint</td><td>Adjust the wait at that waypoint (±0.5 s). <b>Ctrl</b> + wheel sets the start delay of the selected character.</td></tr>
           <tr><td>T S B W L</td><td>Arm Takedown, Throw Stone, Smoke Bomb, Whistle, Lockpick, then click the target.</td></tr>
-          <tr><td>C · R · H</td><td>Carry/drop a body · toggle sneak/run · hold position (clear orders).</td></tr>
+          <tr><td>C · R · H/X</td><td>Drop a carried body (in a bush to hide it, beside water to sink it); click a body to carry it · toggle sneak/run · hold (clear orders).</td></tr>
           <tr><td>Space · Tab · F</td><td>Pause · cycle the viewed layer (sewer / ground / roofs) · centre on the selection.</td></tr>
           <tr><td>F5 · F9</td><td>Quicksave · quickload. Instant.</td></tr>
-          <tr><td>Wheel · middle drag · WASD</td><td>Zoom · pan · pan.</td></tr>
+          <tr><td>Wheel · middle drag · arrow keys</td><td>Zoom · pan · pan.</td></tr>
+          <tr><td>F2</td><td>Reveal mode: no fog, every enemy and cone shown. A design view for studying the map, not for playing.</td></tr>
         </table>
       </div>
       <div class="cta"><button class="primary" data-play>Play the prototype</button></div>

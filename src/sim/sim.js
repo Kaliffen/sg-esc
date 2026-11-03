@@ -32,7 +32,7 @@ export class Sim {
     const chars = squad.map((c, i) => ({
       id: c.id, name: c.name, epithet: c.epithet, color: c.color, attrs: { ...c.attrs }, abilities: c.abilities.slice(),
       consumables: { stone: this.opts.stones, smoke: this.opts.smoke },
-      layer: w.start.layer, x: w.start.x + (i % 2) * 1.2, z: w.start.z + Math.floor(i / 2) * 1.2, facing: -Math.PI / 2,
+      layer: w.start.layer, x: w.start.x + (i % 2) * 2.0 - 1.0, z: w.start.z + Math.floor(i / 2) * 2.0 - 1.0, facing: -Math.PI / 2,
       stance: 'sneak', orders: [], legs: null, delay: 0, waitLeft: 0, action: null, carrying: null, hidden: false, moving: false,
       inventory: [], runNoiseT: 0, planT: 0,
     }));
