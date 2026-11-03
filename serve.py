@@ -7,7 +7,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         self.send_header('Cache-Control', 'no-store')
         super().end_headers()
     def log_message(self, *a): pass
-socketserver.TCPServer.allow_reuse_address = True
-with socketserver.TCPServer(("127.0.0.1", PORT), H) as httpd:
+socketserver.ThreadingTCPServer.allow_reuse_address = True
+with socketserver.ThreadingTCPServer(("127.0.0.1", PORT), H) as httpd:
     print(f"VEIL running at http://localhost:{PORT}/  (Ctrl+C to stop)")
     httpd.serve_forever()
