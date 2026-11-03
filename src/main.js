@@ -40,7 +40,9 @@ class Game {
   }
 
   loadRoster() {
-    try { const saved = JSON.parse(localStorage.getItem(ROSTER_KEY)); if (saved && saved.roster && saved.roster.length) { this.rosterData = saved; return; } } catch { /* ignore */ }
+    // Accept a stored roster only if every character has the shape this build expects (an earlier build stored a different one under the same key).
+    const valid = (r) => r && Array.isArray(r.roster) && r.roster.length === 8 && r.roster.every((c) => typeof c.color === 'string' && c.attrs && ['stealth', 'speed', 'perception', 'strength', 'agility'].every((k) => Number.isFinite(c.attrs[k])) && Array.isArray(c.abilities) && c.abilities.length >= 2);
+    try { const saved = JSON.parse(localStorage.getItem(ROSTER_KEY)); if (valid(saved)) { this.rosterData = saved; return; } } catch { /* ignore */ }
     this.rosterData = generateRoster();
     localStorage.setItem(ROSTER_KEY, JSON.stringify(this.rosterData));
   }

@@ -10,6 +10,7 @@
 - Squad spawns in a 2 m formation; the action bar sits above the portraits.
 
 ### Fixes (from the code review)
+- A roster stored by an earlier build (different shape, no colors) is now detected and regenerated: it made characters colorless and hid the attribute bars.
 - Restarting a mission re-locked doors visually but left the nav grid open: a second run could walk through the Temple Gate, the wicket and the sluice. The sim now rebuilds the grids from its own door state.
 - Enemy `investigate` could crash on an empty path.
 - Door approach side is chosen by real path length, not waypoint count.
