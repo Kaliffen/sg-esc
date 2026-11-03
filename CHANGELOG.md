@@ -3,7 +3,7 @@
 ## 0.9.0 — local validation build (2026-11-03)
 
 ### Gameplay
-- Characters differ much more in speed: sneak 1.3–2.6 m/s, run 3.1–5.6 m/s across SPD 1–10.
+- Everyone is faster and characters differ much more in speed: sneak 1.7–3.2 m/s, run 3.9–7.0 m/s across SPD 1–10.
 - Two rare speed skills (about one character in eight rolls one as a third skill): **Sprint** (V, 3 s at 1.7× run speed, loud, 2 per map) and **Stealth Sprint** (G, 2.5 s at run speed, silent, counts as sneaking, 1 per map).
 - Right-click **drag** sets the direction a character faces on arrival. A gizmo (ring, line, arrow) is drawn while the button is held; the waypoint keeps an arrow after release.
 - Rooftop route restored: the warehouse roof now connects to the south-row roofs and the smithy roof (the roof floors did not overlap, so the ladder led to a dead end).

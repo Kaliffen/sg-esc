@@ -93,7 +93,7 @@ function features() {
   d.ability('Ren', 'ghost'); d.move('Ren', 12, 96, { append: true }); d.run(0.5);
   const x1 = ren.x; d.run(1.0);
   check('stealth sprint: boosted, silent, run speed', ren.boost && ren.boost.kind === 'ghost' && !ren.loud && ren.moving && (x1 - ren.x) > 3.5, `moved ${(x1 - ren.x).toFixed(2)} m in 1 s`);
-  check('speed spread: SPD 1 vs SPD 10 differ by 2x', (() => { const lo = { attrs: { speed: 1 } }, hi = { attrs: { speed: 10 } }; const f = (c) => 1.2 + 0.14 * c.attrs.speed; return f(hi) / f(lo) > 1.9; })());
+  check('speed spread: SPD 1 vs SPD 10 differ by 2x', (() => { const lo = { attrs: { speed: 1 } }, hi = { attrs: { speed: 10 } }; const f = (c) => 1.5 + 0.17 * c.attrs.speed; return f(hi) / f(lo) > 1.9; })());
   check('roof route: warehouse roof connects to the smithy vine', d.reachable('Ren', 109, 100, 1));
   // restart must re-lock doors on the shared nav grid
   d.s.doorLocked.temple_gate = false; d.sim.rebuildNav(0);

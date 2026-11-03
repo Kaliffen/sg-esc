@@ -61,7 +61,7 @@ Select squad (roster) ─► Infiltration map
 | Attribute | Effect |
 |---|---|
 | **Stealth** | Multiplies how fast enemies' detection meters fill when they see you: `rate × (1.30 − 0.06·STL)`. 10 ⇒ 0.70, 1 ⇒ 1.24. |
-| **Speed** | Sneak speed `1.2 + 0.14·SPD` m/s (1.3 to 2.6), run speed `2.8 + 0.28·SPD` m/s (3.1 to 5.6). The spread is wide on purpose: a slow character changes the route, not just the timing. |
+| **Speed** | Sneak speed `1.5 + 0.17·SPD` m/s (1.7 to 3.2), run speed `3.5 + 0.35·SPD` m/s (3.9 to 7.0). The spread is wide on purpose: a slow character changes the route, not just the timing. |
 | **Perception** | Own view range `9 + 0.8·PER` m (120° FOV). Governs what the squad reveals. |
 | **Strength** | ≥5 can carry bodies. ≥7 can lift sewer grates. |
 | **Agility** | ≥7 can climb vines. Takedown takes `1.1 − 0.04·AGI` s. |

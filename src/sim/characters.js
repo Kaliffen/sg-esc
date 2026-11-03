@@ -18,9 +18,9 @@ export const ABILITIES = {
 export const ATTRS = ['stealth', 'speed', 'perception', 'strength', 'agility'];
 export const ATTR_SHORT = { stealth: 'STL', speed: 'SPD', perception: 'PER', strength: 'STR', agility: 'AGI' };
 
-// Wide spread on purpose: SPD 1 sneaks at 1.3 m/s and runs at 3.1, SPD 10 sneaks at 2.6 and runs at 5.6.
-export function sneakSpeed(c) { return 1.2 + 0.14 * c.attrs.speed; }
-export function runSpeed(c) { return 2.8 + 0.28 * c.attrs.speed; }
+// Wide spread on purpose: SPD 1 sneaks at 1.7 m/s and runs at 3.9, SPD 10 sneaks at 3.2 and runs at 7.0.
+export function sneakSpeed(c) { return 1.5 + 0.17 * c.attrs.speed; }
+export function runSpeed(c) { return 3.5 + 0.35 * c.attrs.speed; }
 export function viewRange(c) { return 9 + 0.8 * c.attrs.perception; }
 export function stealthMult(c) { return 1.3 - 0.06 * c.attrs.stealth; }
 export function takedownTime(c) { return 1.1 - 0.04 * c.attrs.agility; }
