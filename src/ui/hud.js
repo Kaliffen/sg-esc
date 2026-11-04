@@ -43,6 +43,7 @@ export class Hud {
       case 'stance': this.sim.toggleStance(sel.id); break;
       case 'hold': this.sim.clearOrders(sel.id); break;
       case 'drop': this.sim.dropNow(sel.id); break;
+      case 'use': this.input.useNearby(false); break;
       default: if (ABILITIES[act] && ABILITIES[act].self) this.sim.orderAbility(sel.id, act, null, false); else if (ABILITIES[act]) ui.armed = ui.armed === act ? null : act;
     }
   }
@@ -72,7 +73,7 @@ export class Hud {
     el('cursor-hint').textContent = ui.armed ? `${ABILITIES[ui.armed].name}: click a target (Esc to cancel)` : (ui.hover?.label || '');
     el('cursor-hint').style.left = `${this.input.mouse.x + 16}px`; el('cursor-hint').style.top = `${this.input.mouse.y + 18}px`;
     // portraits
-    const sig = s.chars.map((c) => `${c.id}${c.id === ui.selectedId ? '*' : ''}${c.stance}${c.boost ? c.boost.kind : ''}${c.hidden ? 'h' : ''}${c.carrying || ''}${c.inventory.join()}${c.consumables.stone}${c.consumables.smoke}${c.consumables.sprint}${c.consumables.ghost}${c.orders.length}${c.delay.toFixed(1)}${c.layer}`).join('|') + `|${ui.armed}|${s.status}`;
+    const sig = s.chars.map((c) => `${c.id}${c.id === ui.selectedId ? '*' : ''}${c.stance}${c.boost ? c.boost.kind : ''}${c.hidden ? 'h' : ''}${c.carrying || ''}${c.inventory.join()}${c.consumables.stone}${c.consumables.smoke}${c.consumables.sprint}${c.consumables.ghost}${c.orders.length}${c.delay.toFixed(1)}${c.layer}`).join('|') + `|${ui.armed}|${s.status}|${this.input.nearbyUse()?.label}`;
     if (sig !== this.lastSig) { this.lastSig = sig; this.renderPortraits(); this.renderActions(); }
     this.renderOrders();
     // world labels
@@ -115,6 +116,8 @@ export class Hud {
       h += btn(ab, d.name + (count !== undefined ? ` ×${count}` : ''), d.key, ui.armed === ab, count === 0);
     }
     if (sel.carrying) h += btn('drop', 'Drop body', 'C');
+    const u = this.input.nearbyUse(sel);
+    if (u) h += btn('use', u.label, 'E', u.ok, !u.ok);
     h += btn('hold', 'Hold / clear orders', 'H');
     a.innerHTML = h;
   }

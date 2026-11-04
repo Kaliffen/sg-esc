@@ -46,6 +46,32 @@ export class Input {
     this.ui.hover = this.pick(this.ui.cursorWorld);
   }
 
+  /** The closest thing the selected character can use from where they stand (E key / action bar): a ladder, grate, vine, hatch or lever within 3 m. */
+  nearbyUse(sel = this.selected) {
+    if (!sel) return null;
+    const s = this.sim.state, w = this.sim.world;
+    let best = null, bd = 3;
+    for (const t of w.transitions) for (const side of [t.a, t.b]) if (side.layer === sel.layer) {
+      const d = dist(sel, side); if (d > bd) continue;
+      const closed = t.closed && !s.transitions[t.id].open;
+      const ok = this.sim.canUseTransition(sel, t);
+      const need = ok ? '' : ` (needs ${t.req.attr.slice(0, 3).toUpperCase()} ${t.req.min})`;
+      best = { kind: 'transition', id: t.id, label: `${closed ? 'Lift' : 'Use'} ${t.name.toLowerCase()}${need}`, ok }; bd = d;
+    }
+    for (const it of w.interactables) if (it.layer === sel.layer) {
+      const d = dist(sel, it); if (d > bd) continue;
+      const used = s.interactables[it.id].used;
+      best = { kind: 'interactable', id: it.id, label: used ? `${it.name} (used)` : `Use ${it.name.toLowerCase()}`, ok: !used }; bd = d;
+    }
+    return best;
+  }
+  useNearby(append = false) {
+    const sel = this.selected, u = this.nearbyUse(sel);
+    if (!u) { this.hud.toast('Nothing to use here. Walk up to a ladder, grate, vine or lever.', 'info'); return; }
+    if (u.kind === 'transition') this.sim.orderUseTransition(sel.id, u.id, append);
+    else this.sim.orderInteract(sel.id, u.id, append);
+  }
+
   /** What is under the cursor? Returns {kind, id?, pos, label, idx?} */
   pick(p) {
     const s = this.sim.state, w = this.sim.world, L = this.ui.viewLayer, v = this.sim.view;
@@ -155,6 +181,7 @@ export class Input {
     if (k === 'r') { this.sim.toggleStance(sel.id); return; }
     if (k === 'h' || k === 'x') { this.sim.clearOrders(sel.id); return; }
     if (k === 'f') { this.vp.centerOn(sel.x, sel.z); this.ui.viewLayer = sel.layer; this.ui.followLayer = true; return; }
+    if (k === 'e') { this.useNearby(e.shiftKey); return; }
     if (k === 'c') { if (sel.carrying) this.sim.dropNow(sel.id); else this.hud.toast('Click a body to carry it (STR 5).', 'info'); return; }
     for (const [ab, def] of Object.entries(ABILITIES)) {
       if (k === def.key.toLowerCase()) {

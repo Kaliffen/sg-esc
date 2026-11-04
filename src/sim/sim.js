@@ -11,7 +11,7 @@ export const SAVE_VERSION = 1;
 export const DEFAULT_OPTS = { detectMult: 1, stones: 3, smoke: 1, blind: false, reminder: true };
 const PLAYER_FOV = (120 * Math.PI) / 180;
 const ABILITY_RANGE = { stone: 12, smoke: 10 };
-const NOISE = { run: 7, stone: 9, winch: 6, grate: 5, whistle: 14 };
+const NOISE = { run: 4, stone: 9, winch: 6, grate: 5, whistle: 14 };
 
 export class Sim {
   constructor(world, squad, opts = {}) {

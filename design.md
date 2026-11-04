@@ -85,7 +85,7 @@ Every character can: sneak, run, hide in bushes, use ladders/stairs/hatches, pic
 
 ### 4.4 Stances
 - **Sneak** (default): quiet, normal detection.
-- **Run** (toggle `R`): faster, detection ×1.6, makes noise in a 7 m radius every step (enemies turn to look, then investigate).
+- **Run** (toggle `R`): faster, detection ×1.6, makes noise in a 4 m radius every step (enemies turn to look, then investigate).
 
 ---
 
@@ -117,7 +117,7 @@ When nobody is visible the meter decays at 0.6/s. Meter ≥ 0.35 ⇒ **suspiciou
 
 ### 5.4 Hearing / noise
 Noise events have a position and radius (halved through walls). Every mobile enemy on the same layer inside the radius walks to it, looks around (Guards 4 s, Elites and Dogs 2 s) and returns to its routine. Stationary Sentinels only turn toward the noise for 3 s.
-Noise sources: running steps (7 m), stone impact (9 m), lever use (6 m), lifting a grate (5 m), whistle (14 m, nearest enemy only).
+Noise sources: running steps (4 m), stone impact (9 m), lever use (6 m), lifting a grate (5 m), whistle (14 m, nearest enemy only).
 
 ### 5.5 Bodies
 Knocked-out enemies lie where they fell. Any enemy that sees a body (cone + LOS) raises the alarm immediately. Bodies can be carried (STR≥5, carrier moves at 70 % speed) and dropped in bushes to hide them, or dropped into water (harbour, canal) where they sink and are gone. Water hides bodies; bushes hide bodies and people.
