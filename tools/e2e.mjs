@@ -89,7 +89,7 @@ function features() {
   const x0 = ren.x; d.run(1.0);
   check('sprint: boosted, loud, and faster than running', ren.boost && ren.boost.kind === 'sprint' && ren.loud && (ren.x - x0) > 6, `moved ${(ren.x - x0).toFixed(2)} m in 1 s`);
   d.until(() => d.idle('Ren'), 20); d.run(3);
-  check('sprint: charge spent and boost expired', ren.consumables.sprint === 1 && !ren.boost);
+  check('sprint: unlimited (no charge counter) and boost expired', ren.consumables.sprint === undefined && !ren.boost);
   d.ability('Ren', 'ghost'); d.move('Ren', 12, 96, { append: true }); d.run(0.5);
   const x1 = ren.x; d.run(1.0);
   check('stealth sprint: boosted, silent, run speed', ren.boost && ren.boost.kind === 'ghost' && !ren.loud && ren.moving && (x1 - ren.x) > 3.5, `moved ${(x1 - ren.x).toFixed(2)} m in 1 s`);

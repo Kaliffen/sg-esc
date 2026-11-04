@@ -33,7 +33,7 @@ export class Sim {
     const w = this.world;
     const chars = squad.map((c, i) => ({
       id: c.id, name: c.name, epithet: c.epithet, color: c.color, attrs: { ...c.attrs }, abilities: c.abilities.slice(),
-      consumables: { stone: this.opts.stones, smoke: this.opts.smoke, sprint: ABILITIES.sprint.charges, ghost: ABILITIES.ghost.charges },
+      consumables: { stone: this.opts.stones, smoke: this.opts.smoke, ghost: ABILITIES.ghost.charges },
       layer: w.start.layer, x: w.start.x + (i % 2) * 2.0 - 1.0, z: w.start.z + Math.floor(i / 2) * 2.0 - 1.0, facing: -Math.PI / 2,
       stance: 'sneak', orders: [], legs: null, delay: 0, waitLeft: 0, action: null, carrying: null, hidden: false, moving: false,
       inventory: [], runNoiseT: 0, planT: 0, boost: null, loud: false,
@@ -456,7 +456,7 @@ export class Sim {
         this.msg(`${c.name} drops a smoke bomb.`, 'info');
         return;
       case 'sprint': case 'ghost':
-        c.consumables[a.ability]--;
+        if (c.consumables[a.ability] !== undefined) c.consumables[a.ability]--;
         c.boost = { kind: a.ability, tEnd: s.t + ABILITIES[a.ability].duration };
         this.msg(a.ability === 'sprint' ? `${c.name} sprints.` : `${c.name} moves like a ghost.`, 'info');
         return;

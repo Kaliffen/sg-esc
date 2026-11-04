@@ -12,7 +12,7 @@ export const ABILITIES = {
   smoke:    { name: 'Smoke Bomb', key: 'B', desc: '5 m smoke cloud for 8 s, blocks sight both ways. 1 bomb.' },
   whistle:  { name: 'Whistle', key: 'W', desc: 'Lure the nearest enemy within 14 m to your position.', self: true },
   // Rare speed skills (about one character in eight rolls one as a third skill)
-  sprint:   { name: 'Sprint', key: 'V', desc: 'Rare. For 3 s move at 1.7x run speed. Loud and easy to spot, like running. 2 per map.', self: true, rare: true, duration: 3, charges: 2 },
+  sprint:   { name: 'Sprint', key: 'V', desc: 'Rare. For 3 s move at 1.7x run speed. Loud and easy to spot, like running. Unlimited.', self: true, rare: true, duration: 3 },
   ghost:    { name: 'Stealth Sprint', key: 'G', desc: 'Rare. For 2.5 s move at run speed silently and counted as sneaking. 1 per map.', self: true, rare: true, duration: 2.5, charges: 1 },
 };
 export const ATTRS = ['stealth', 'speed', 'perception', 'strength', 'agility'];

@@ -74,7 +74,7 @@ Select squad (roster) ─► Infiltration map
 | **Lockpick** | L / left-click door | locked door | Opens locked doors/gates without a key. Takes 3 s standing at the door. |
 | **Smoke Bomb** | B | ground point ≤10 m | 5 m radius cloud for 8 s. Blocks line of sight both ways. 1 bomb. |
 | **Whistle** | W | self | Lures the single nearest enemy within 14 m to walk to the whistler's position and look around. Riskier than a stone (they come to *you*), but no consumable. |
-| **Sprint** (rare) | V | self | For 3 s move at 1.7× run speed. Loud and detected like running. 2 per map. |
+| **Sprint** (rare) | V | self | For 3 s move at 1.7× run speed. Loud and detected like running. Unlimited uses. |
 | **Stealth Sprint** (rare) | G | self | For 2.5 s move at run speed, silent and detected like sneaking. 1 per map. |
 
 Rare skills: about one character in eight rolls one as a third skill. They never replace the two base skills, so roster coverage is unchanged.
